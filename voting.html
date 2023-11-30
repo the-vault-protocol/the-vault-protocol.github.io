@@ -1,0 +1,57 @@
+<html>
+
+<head>
+  <title>Vault</title>
+  <link href="test.css" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="topnav">
+    <a href="#" style="float: left;"><b></b>VAULT Protocol</b></a>
+    <a href="#" style="float: left;">Status: <b><span id="vaultStatus"></span></b></a>
+    <a href="#" style="float: left;">Token: <b><span id="vaultToken"></span></b></a>
+    <a href="#" style="float: left;">Exchange: <b><span id="oracleCondition"></span></b></a>
+    <a href="#" id="connectButton">CONNECT</a>
+    <a class="active" href="voting.html">Voting</a>
+    <a href="fees.html">Fees</a>
+    <a href="redeem.html">Redeem</a>
+    <a href="index.html">Convert</a>
+  </div>
+
+  <div class="container">
+
+    Status: <b><span id="votingPhase"></span></b> <br>
+    Amount Required To Initiate Unlock: <b><span id="unlockAmount"></span></b> <br><br>
+
+    <button id="unlockRequestButton">Request Unlock</button>
+    <button id="resolveDisputeButton">Resolve Dispute</button>
+
+    <p>
+      Has the exchange defaulted?
+      <input id="voteWeight" placeholder="Vote Weight" />
+      <select id="voteValue">
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+      <button id="voteButton">Place Vote</button>
+    </p>
+
+    <h3>Rewards From Voting</h3>
+
+    <p>
+      Your Base Token Reward (From Voting): <b><span id="baseTokenReward"></span></b>
+      <button id="withdrawBaseTokenRewardButton">Withdraw</button>
+    </p>
+
+    <p>
+      Your Governance Token Reward (From Voting): <b><span id="governanceTokenReward"></span></b>
+      <button id="withdrawGovernanceTokenRewardButton">Withdraw</button>
+    </p>
+
+  </div>
+
+</body>
+<script src="index.js" type="module"></script>
+
+</html>

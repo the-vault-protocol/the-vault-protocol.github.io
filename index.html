@@ -1,0 +1,38 @@
+<html>
+
+<head>
+  <title>Vault</title>
+  <link href="test.css" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="topnav">
+    <a href="#" style="float: left;"><b></b>VAULT Protocol</b></a>
+    <a href="#" style="float: left;">Status: <b><span id="vaultStatus"></span></b></a>
+    <a href="#" style="float: left;">Token: <b><span id="vaultToken"></span></b></a>
+    <a href="#" style="float: left;">Exchange: <b><span id="oracleCondition"></span></b></a>
+    <a href="#" id="connectButton">CONNECT</a>
+    <a href="voting.html">Voting</a>
+    <a href="fees.html">Fees</a>
+    <a href="redeem.html">Redeem</a>
+    <a class="active" href="index.html">Convert</a>
+  </div>
+
+  <div class="container">
+
+    Base Token Amount: <b><span id="baseTokenAmount"></span></b> <br>
+    C Token Amount Amount: <b><span id="cTokenAmount"></span></b> <br>
+    I Token Amount: <b><span id="iTokenAmount"></span></b> <br>
+
+    <p>
+      <input id="convertInput" placeholder="e.g. 42" />
+      <button id="convertButton">Convert</button>
+    </p>
+
+  </div>
+
+</body>
+<script src="index.js" type="module"></script>
+
+</html>
