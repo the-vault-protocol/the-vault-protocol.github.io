@@ -3,6 +3,7 @@ import { vault_address, mintable_erc_20_abi, erc_20_abi, vault_abi } from "./con
 
 // get buttons
 const connectButton = document.getElementById("connectButton");
+const allowBaseTokenButton = document.getElementById("allowBaseTokenButton");
 const convertButton = document.getElementById("convertButton");
 const redeemButton = document.getElementById("redeemButton");
 const withdrawFeesButton = document.getElementById("withdrawFeesButton");
@@ -28,6 +29,7 @@ const governanceTokenReward = document.getElementById("governanceTokenReward");
 
 // event handlers
 try { connectButton.onclick = connect; } catch (error) { console.log(error); }
+try { allowBaseTokenButton.onclick = allowBaseToken; } catch (error) { console.log(error); }
 try { convertButton.onclick = convert; } catch (error) { console.log(error); }
 try { redeemButton.onclick = redeem; } catch (error) { console.log(error); }
 try { withdrawFeesButton.onclick = withdrawFees; } catch (error) { console.log(error); }
@@ -36,6 +38,9 @@ try { resolveDisputeButton.onclick = resolveDispute; } catch (error) { console.l
 try { voteButton.onclick = vote; } catch (error) { console.log(error); }
 try { withdrawBaseTokenRewardButton.onclick = withdrawBaseTokenReward; } catch (error) { console.log(error); }
 try { withdrawGovernanceTokenRewardButton.onclick = withdrawGovernanceTokenReward; } catch (error) { console.log(error); }
+
+// oninput events
+try { document.getElementById("convertInput").oninput = convertInputChange; } catch (error) { console.log(error); }
 
 // global variables
 var connected = false;
@@ -158,6 +163,48 @@ async function updateFields() {
 
 // conversion & redemption
 
+async function allowBaseToken() {
+
+  if (connected) {
+
+    const convertInput = document.getElementById("convertInput").value;
+
+    // check minimum conversion amount
+    if (convertInput <= 0) {
+      alert("Conversion amount must be greater than 0");
+      return;
+    }
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
+    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
+
+    // check base token balance
+    const baseTokenBalance = await base_token_contract.balanceOf(account, {});
+
+    if (parseInt(baseTokenBalance) < parseInt(convertInput)) {
+      alert("Insufficient funds!");
+      return;
+    }
+
+    // check base token allowance
+    const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
+
+    if (parseInt(baseTokenAllowance) < parseInt(convertInput)) {
+      await base_token_contract.approve(vault_address, convertInput, {});
+    }
+    else {
+      alert("Your spending allowance is already high enough to convert. Current allowance is: " + baseTokenAllowance);
+    }
+
+  } else {
+    await connect();
+  }
+
+}
+
 async function convert() {
 
   // TODO: a minimum fee of 1 must be enforced in the contract
@@ -190,7 +237,7 @@ async function convert() {
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
     if (parseInt(baseTokenAllowance) < parseInt(convertInput)) {
-      await base_token_contract.approve(vault_address, convertInput, {});
+      alert("Increase your spending allowance before converting. Current allowance is: " + baseTokenAllowance);
       return;
     }
 
@@ -476,6 +523,37 @@ async function withdrawGovernanceTokenReward() {
 
   } else {
     await connect();
+  }
+
+}
+
+// oninput ui functions
+
+async function convertInputChange() {
+
+  if (connected) {
+
+    const convertInput = document.getElementById("convertInput").value;
+
+    // check if current allowance not big enough
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
+    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
+
+    // check base token allowance
+    const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
+
+    console.log(baseTokenAllowance);
+
+    if (parseInt(baseTokenAllowance) < parseInt(convertInput)) {
+      allowBaseTokenButton.hidden = false;
+    } else {
+      allowBaseTokenButton.hidden = true;
+    }
+
   }
 
 }
