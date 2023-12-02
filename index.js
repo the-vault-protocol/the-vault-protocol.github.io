@@ -45,7 +45,7 @@ try { withdrawGovernanceTokenRewardButton.onclick = withdrawGovernanceTokenRewar
 
 // oninput events
 try { document.getElementById("convertInput").oninput = convertInputChange; } catch (error) { console.log(error); }
-try { document.getElementById("voteWeight").oninput = convertInputChange; } catch (error) { console.log(error); }
+try { document.getElementById("voteWeight").oninput = voteWeightInputChange; } catch (error) { console.log(error); }
 
 // global variables
 var connected = false;
@@ -157,6 +157,17 @@ async function updateFields() {
       // voting reward
       try { baseTokenReward.innerHTML = await vault_contract.getOwedBaseTokenRewards(); } catch (error) { console.log(error); }
       try { governanceTokenReward.innerHTML = await vault_contract.getOwedGovernanceTokenRewards(); } catch (error) { console.log(error); }
+
+      // state based base token allowance for voting visibility
+      const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
+
+      if (!disputeOpen && (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount))) {
+          allowBaseTokenForVotingButton.hidden = false;
+      }
+      else {
+          allowBaseTokenForVotingButton.hidden = true;
+      }
+      
 
     } catch (error) {
       console.log(error);
@@ -665,4 +676,34 @@ async function convertInputChange() {
 
   }
 
+}
+
+async function voteWeightInputChange() {
+  
+  if (connected) {
+
+    const voteWeight = document.getElementById("voteWeight").value;
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    
+    const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
+    const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
+
+    // check if voting is open
+    var disputeOpen = await vault_contract.getDisputeStatus();
+    var disputeEndTime = await vault_contract.getDisputeEndTime();
+
+    // check governance token allowance
+    const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
+    const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
+    
+    if (disputeOpen && (parseInt(disputeEndTime) > (Date.now() / 1000)) && (parseInt(governanceTokenAllowance) < parseInt(voteWeight))) {
+      allowGovernanceTokenForVotingButton.hidden = false;
+    } else {
+      allowGovernanceTokenForVotingButton.hidden = true;
+    } 
+
+  }
+  
 }
