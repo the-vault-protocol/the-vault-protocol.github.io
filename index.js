@@ -10,6 +10,8 @@ const withdrawFeesButton = document.getElementById("withdrawFeesButton");
 const unlockRequestButton = document.getElementById("unlockRequestButton");
 const resolveDisputeButton = document.getElementById("resolveDisputeButton");
 const voteButton = document.getElementById("voteButton");
+const allowBaseTokenForVotingButton = document.getElementById("allowBaseTokenForVotingButton");
+const allowGovernanceTokenForVotingButton = document.getElementById("allowGovernanceTokenForVotingButton");
 const withdrawBaseTokenRewardButton = document.getElementById("withdrawBaseTokenRewardButton");
 const withdrawGovernanceTokenRewardButton = document.getElementById("withdrawGovernanceTokenRewardButton");
 
@@ -36,11 +38,14 @@ try { withdrawFeesButton.onclick = withdrawFees; } catch (error) { console.log(e
 try { unlockRequestButton.onclick = requestUnlock; } catch (error) { console.log(error); }
 try { resolveDisputeButton.onclick = resolveDispute; } catch (error) { console.log(error); }
 try { voteButton.onclick = vote; } catch (error) { console.log(error); }
+try { allowBaseTokenForVotingButton.onclick = allowBaseTokenForVoting; } catch (error) { console.log(error); }
+try { allowGovernanceTokenForVotingButton.onclick = allowGovernanceTokenForVoting; } catch (error) { console.log(error); }
 try { withdrawBaseTokenRewardButton.onclick = withdrawBaseTokenReward; } catch (error) { console.log(error); }
 try { withdrawGovernanceTokenRewardButton.onclick = withdrawGovernanceTokenReward; } catch (error) { console.log(error); }
 
 // oninput events
 try { document.getElementById("convertInput").oninput = convertInputChange; } catch (error) { console.log(error); }
+try { document.getElementById("voteWeight").oninput = convertInputChange; } catch (error) { console.log(error); }
 
 // global variables
 var connected = false;
@@ -370,7 +375,7 @@ async function requestUnlock() {
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
     if (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount)) {
-      await base_token_contract.approve(vault_address, requiredDisputeInitiationAmount, {});
+      alert("Increase your base token allowance before requesting unlock. Current allowance is: " + baseTokenAllowance);
       return;
     }
 
@@ -462,7 +467,7 @@ async function vote() {
     const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
 
     if (parseInt(governanceTokenAllowance) < parseInt(voteWeight)) {
-      await governance_token_contract.approve(vault_address, voteWeight, {});
+      alert("Increase your governance token allowance before converting. Current allowance is: " + governanceTokenAllowance);
       return;
     }
 
@@ -473,6 +478,110 @@ async function vote() {
     await connect();
   }
 
+}
+
+async function allowBaseTokenForVoting() {
+
+  if (connected) {
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
+    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
+    const i_token_contract = new ethers.Contract(await vault_contract.getITokenAddress({}), mintable_erc_20_abi, signer);
+
+    // check if no dispute is open
+    var disputeOpen = await vault_contract.getDisputeStatus();
+
+    if (disputeOpen) {
+      alert("An unlock request has already been opened");
+      return;
+    }
+    
+    var totalITokenSupply = await i_token_contract.totalSupply({});
+    var initiationAmountDenominator = await vault_contract.getInitiationAmountDenominator();
+
+    var requiredDisputeInitiationAmount = Math.floor(parseInt(totalITokenSupply) / parseInt(initiationAmountDenominator));
+
+    // check base token balance
+    const baseTokenBalance = await base_token_contract.balanceOf(account, {});
+
+    if (parseInt(baseTokenBalance) < parseInt(requiredDisputeInitiationAmount)) {
+      alert("Insufficient base tokens!");
+      return;
+    }
+
+    // check base token allowance
+    const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
+
+    if (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount)) {
+      await base_token_contract.approve(vault_address, requiredDisputeInitiationAmount, {});
+    }
+    else {
+      alert("Your spending allowance is already high enough. Current allowance is: " + baseTokenAllowance);
+    }
+
+  } else {
+    await connect();
+  }
+
+}
+
+async function allowGovernanceTokenForVoting() {
+
+  if (connected) {
+
+    const voteWeight = document.getElementById("voteWeight").value;
+
+    // check if vote weight is greater than 0
+    if (voteWeight <= 0) {
+      alert("Vote weight must be greater than 0");
+      return;
+    }
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
+    const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
+
+    // check if voting is open
+    var disputeOpen = await vault_contract.getDisputeStatus();
+    var disputeEndTime = await vault_contract.getDisputeEndTime();
+
+    if (!disputeOpen) {
+      alert("No unlock request is open at the moment");
+      return;
+    }
+
+    if (parseInt(disputeEndTime) <= (Date.now() / 1000)) {
+      alert("The voting phase is already over");
+      return;
+    }
+    
+    // check governance token balance
+    const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
+
+    if (parseInt(governanceTokenBalance) < parseInt(voteWeight)) {
+      alert("Insufficient governance tokens for the selected vote weight!");
+      return;
+    }
+
+    // check governance token allowance
+    const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
+
+    if (parseInt(governanceTokenAllowance) < parseInt(voteWeight)) {
+      await governance_token_contract.approve(vault_address, voteWeight, {});
+    }
+    else {
+      alert("Your governance token allowance is already high enough. Current allowance is: " + governanceTokenAllowance);
+    }
+
+  } else {
+    await connect();
+  }
+  
 }
 
 // voting reward
