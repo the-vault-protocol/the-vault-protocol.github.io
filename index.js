@@ -57,8 +57,16 @@ const governance_token_decimals = 18;
 const i_token_decimals = 18;
 const c_token_decimals = 18;
 
-function round(number, decimals) {
-  return Math.round(number / decimals * 100) / 100
+function format_number(number, decimals) {
+  return ethers.utils.formatUnits(number, decimals);
+}
+
+function parseBigNumber(value, decimals) {
+  try {
+    return ethers.BigNumber.from(value).mul(ethers.utils.parseUnits("1", 18));
+  } catch (error) {
+    return ethers.BigNumber.from("0");
+  }
 }
 
 // connecting
@@ -119,12 +127,31 @@ async function updateFields() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
-    const c_token_contract = new ethers.Contract(await vault_contract.getCTokenAddress({}), mintable_erc_20_abi, signer);
-    const i_token_contract = new ethers.Contract(await vault_contract.getITokenAddress({}), mintable_erc_20_abi, signer);
+    const governance_token_contract = new ethers.Contract(
+      await vault_contract.getGovernanceTokenAddress({}),
+      erc_20_abi,
+      signer
+    );
+    const base_token_contract = new ethers.Contract(
+      await vault_contract.getBaseTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
+    const c_token_contract = new ethers.Contract(
+      await vault_contract.getCTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
+    const i_token_contract = new ethers.Contract(
+      await vault_contract.getITokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     try {
+
+      // set base token decimals
+      try { base_token_decimals = await base_token_contract.decimals(); } catch (error) { }
 
       if (await vault_contract.getLockedState()) {
         var vaultLocked = "Locked";
@@ -133,13 +160,33 @@ async function updateFields() {
       }
 
       try { vaultToken.innerHTML = await base_token_contract.name({}); } catch (error) { }
-      try { oracleCondition.innerHTML = await vault_contract.getOracleCondition(); } catch (error) { }
-      try { baseTokenAmount.innerHTML = await base_token_contract.balanceOf(account, {}); } catch (error) { }
-      try { cTokenAmount.innerHTML = await c_token_contract.balanceOf(account, {}); } catch (error) { }
-      try { iTokenAmount.innerHTML = await i_token_contract.balanceOf(account, {}); } catch (error) { }
       try { vaultStatus.innerHTML = vaultLocked; } catch (error) { }
-      try { governanceTokenAmount.innerHTML = await governance_token_contract.balanceOf(account, {}); } catch (error) { }
-      try { accruedFeesAmount.innerHTML = await vault_contract.getOwedFees({}); } catch (error) { }
+      try { oracleCondition.innerHTML = await vault_contract.getOracleCondition(); } catch (error) { }
+      try {
+        baseTokenAmount.innerHTML = format_number(
+          await base_token_contract.balanceOf(account, {}), base_token_decimals
+        );
+      } catch (error) { }
+      try {
+        cTokenAmount.innerHTML = format_number(
+          await c_token_contract.balanceOf(account, {}), c_token_decimals
+        );
+      } catch (error) { }
+      try {
+        iTokenAmount.innerHTML = format_number(
+          await i_token_contract.balanceOf(account, {}), i_token_decimals
+        );
+      } catch (error) { }
+      try {
+        governanceTokenAmount.innerHTML = format_number(
+          await governance_token_contract.balanceOf(account, {}), governance_token_decimals
+        );
+      } catch (error) { }
+      try {
+        accruedFeesAmount.innerHTML = format_number(
+          await vault_contract.getOwedFees({}), base_token_decimals
+        );
+      } catch (error) { }
 
       // dispute status
       var disputeOpen = await vault_contract.getDisputeStatus();
@@ -160,26 +207,35 @@ async function updateFields() {
       var totalITokenSupply = await i_token_contract.totalSupply({});
       var initiationAmountDenominator = await vault_contract.getInitiationAmountDenominator();
 
-      var requiredDisputeInitiationAmount = Math.floor(parseInt(totalITokenSupply) / parseInt(initiationAmountDenominator));
+      var requiredDisputeInitiationAmount = totalITokenSupply.div(initiationAmountDenominator);
 
-      try { unlockAmount.innerHTML = requiredDisputeInitiationAmount; } catch (error) { }
+      try {
+        unlockAmount.innerHTML = format_number(
+          requiredDisputeInitiationAmount, base_token_decimals
+        );
+      } catch (error) { }
 
       // voting reward
-      try { baseTokenReward.innerHTML = await vault_contract.getOwedBaseTokenRewards(); } catch (error) { }
-      try { governanceTokenReward.innerHTML = await vault_contract.getOwedGovernanceTokenRewards(); } catch (error) { }
+      try {
+        baseTokenReward.innerHTML = format_number(
+          await vault_contract.getOwedBaseTokenRewards(), base_token_decimals
+        );
+      } catch (error) { }
+      try {
+        governanceTokenReward.innerHTML = format_number(
+          await vault_contract.getOwedGovernanceTokenRewards(), governance_token_decimals
+        );
+      } catch (error) { }
 
       // state based base token allowance for voting visibility
       const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
-      if (!disputeOpen && (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount))) {
+      if (!disputeOpen && (baseTokenAllowance.lt(requiredDisputeInitiationAmount))) {
         try { allowBaseTokenForVotingButton.hidden = false; } catch (error) { }
       }
       else {
         try { allowBaseTokenForVotingButton.hidden = true; } catch (error) { }
       }
-
-      // set base token decimals
-      try { base_token_decimals = await base_token_contract.decimals(); } catch (error) { }
 
     } catch (error) {
       console.log(error);
@@ -195,10 +251,10 @@ async function allowBaseToken() {
 
   if (connected) {
 
-    const convertInput = document.getElementById("convertInput").value;
+    const convertInput = parseBigNumber(document.getElementById("convertInput").value, base_token_decimals);
 
     // check minimum conversion amount
-    if (convertInput <= 0) {
+    if (convertInput.lte(0)) {
       alert("Conversion amount must be greater than 0");
       return;
     }
@@ -207,12 +263,16 @@ async function allowBaseToken() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
+    const base_token_contract = new ethers.Contract(
+      await vault_contract.getBaseTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     // check base token balance
     const baseTokenBalance = await base_token_contract.balanceOf(account, {});
 
-    if (parseInt(baseTokenBalance) < parseInt(convertInput)) {
+    if (baseTokenBalance.lt(convertInput)) {
       alert("Insufficient funds!");
       return;
     }
@@ -220,11 +280,14 @@ async function allowBaseToken() {
     // check base token allowance
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
-    if (parseInt(baseTokenAllowance) < parseInt(convertInput)) {
+    if (baseTokenAllowance.lt(convertInput)) {
       await base_token_contract.approve(vault_address, convertInput, {});
     }
     else {
-      alert("Your spending allowance is already high enough to convert. Current allowance is: " + baseTokenAllowance);
+      alert(
+        "Your spending allowance is already high enough to convert. Current allowance is: " +
+        format_number(baseTokenAllowance, base_token_decimals)
+      );
     }
 
   } else {
@@ -235,14 +298,12 @@ async function allowBaseToken() {
 
 async function convert() {
 
-  // TODO: a minimum fee of 1 must be enforced in the contract
-
   if (connected) {
 
-    const convertInput = document.getElementById("convertInput").value;
+    const convertInput = parseBigNumber(document.getElementById("convertInput").value, base_token_decimals);
 
     // check minimum conversion amount
-    if (convertInput <= 0) {
+    if (convertInput.lte(0)) {
       alert("Conversion amount must be greater than 0");
       return;
     }
@@ -251,12 +312,16 @@ async function convert() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
+    const base_token_contract = new ethers.Contract(
+      await vault_contract.getBaseTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     // check base token balance
     const baseTokenBalance = await base_token_contract.balanceOf(account, {});
 
-    if (parseInt(baseTokenBalance) < parseInt(convertInput)) {
+    if (baseTokenBalance.lt(convertInput)) {
       alert("Insufficient funds!");
       return;
     }
@@ -264,8 +329,11 @@ async function convert() {
     // check base token allowance
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
-    if (parseInt(baseTokenAllowance) < parseInt(convertInput)) {
-      alert("Increase your spending allowance before converting. Current allowance is: " + baseTokenAllowance);
+    if (baseTokenAllowance.lt(convertInput)) {
+      alert(
+        "Increase your spending allowance before converting. Current allowance is: " +
+        format_number(baseTokenAllowance, base_token_decimals)
+      );
       return;
     }
 
@@ -282,10 +350,10 @@ async function redeem() {
 
   if (connected) {
 
-    const redeemInput = document.getElementById("redeemInput").value;
+    const redeemInput = parseBigNumber(document.getElementById("redeemInput").value, base_token_decimals);
 
     // check minimum redemption amount
-    if (redeemInput <= 0) {
+    if (redeemInput.lte(0)) {
       alert("Redemption amount must be greater than 0");
       return;
     }
@@ -294,9 +362,16 @@ async function redeem() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
-    const c_token_contract = new ethers.Contract(await vault_contract.getCTokenAddress({}), mintable_erc_20_abi, signer);
-    const i_token_contract = new ethers.Contract(await vault_contract.getITokenAddress({}), mintable_erc_20_abi, signer);
+    const c_token_contract = new ethers.Contract(
+      await vault_contract.getCTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
+    const i_token_contract = new ethers.Contract(
+      await vault_contract.getITokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     // check vault status
     if (await vault_contract.getLockedState()) {
@@ -305,7 +380,7 @@ async function redeem() {
       const cTokenBalance = await c_token_contract.balanceOf(account, {});
       const iTokenBalance = await i_token_contract.balanceOf(account, {});
 
-      if ((parseInt(cTokenBalance) < parseInt(redeemInput)) || (parseInt(iTokenBalance) < parseInt(redeemInput))) {
+      if ((cTokenBalance.lt(redeemInput)) || (iTokenBalance.lt(redeemInput))) {
         alert("Insufficient funds!");
         return;
       }
@@ -318,7 +393,7 @@ async function redeem() {
       // check i token balance
       const iTokenBalance = await i_token_contract.balanceOf(account, {});
 
-      if (parseInt(iTokenBalance) < parseInt(redeemInput)) {
+      if (iTokenBalance.lt(redeemInput)) {
         alert("Insufficient funds!");
         return;
       }
@@ -347,7 +422,7 @@ async function withdrawFees() {
     const owedFees = await vault_contract.getOwedFees({});
 
     // check if there are some fees to withdraw
-    if (owedFees <= 0) {
+    if (owedFees.lte(0)) {
       alert("Owed fees must be greater than 0");
       return;
     }
@@ -372,8 +447,16 @@ async function requestUnlock() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
-    const i_token_contract = new ethers.Contract(await vault_contract.getITokenAddress({}), mintable_erc_20_abi, signer);
+    const base_token_contract = new ethers.Contract(
+      await vault_contract.getBaseTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
+    const i_token_contract = new ethers.Contract(
+      await vault_contract.getITokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     // check if no dispute is open
     var disputeOpen = await vault_contract.getDisputeStatus();
@@ -386,10 +469,10 @@ async function requestUnlock() {
     // check if user has enough funds to request an unlock
     var totalITokenSupply = await i_token_contract.totalSupply({});
     var initiationAmountDenominator = await vault_contract.getInitiationAmountDenominator();
-    var requiredDisputeInitiationAmount = Math.floor(parseInt(totalITokenSupply) / parseInt(initiationAmountDenominator));
+    var requiredDisputeInitiationAmount = totalITokenSupply.div(initiationAmountDenominator);
     var userBaseTokens = await base_token_contract.balanceOf(account, {});
 
-    if (parseInt(requiredDisputeInitiationAmount) > parseInt(userBaseTokens)) {
+    if (userBaseTokens.lt(requiredDisputeInitiationAmount)) {
       alert("You don't have enough base tokens to open an unlock request");
       return;
     }
@@ -397,8 +480,11 @@ async function requestUnlock() {
     // check base token allowance
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
-    if (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount)) {
-      alert("Increase your base token allowance before requesting unlock. Current allowance is: " + baseTokenAllowance);
+    if (baseTokenAllowance.lt(requiredDisputeInitiationAmount)) {
+      alert(
+        "Increase your base token allowance before requesting unlock. Current allowance is: " +
+        baseTokenAllowance
+      );
       return;
     }
 
@@ -453,7 +539,11 @@ async function vote() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
+    const governance_token_contract = new ethers.Contract(
+      await vault_contract.getGovernanceTokenAddress({}),
+      erc_20_abi,
+      signer
+    );
 
     // check if voting is open
     var disputeOpen = await vault_contract.getDisputeStatus();
@@ -469,11 +559,11 @@ async function vote() {
       return;
     }
 
-    const voteWeight = document.getElementById("voteWeight").value;
+    const voteWeight = parseBigNumber(document.getElementById("voteWeight").value, governance_token_decimals);
     const voteValue = document.getElementById("voteValue").value;
 
     // check if vote weight is greater than 0
-    if (voteWeight <= 0) {
+    if (voteWeight.lte(0)) {
       alert("Vote weight must be greater than 0");
       return;
     }
@@ -481,21 +571,28 @@ async function vote() {
     // check governance token balance
     const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
 
-    if (parseInt(governanceTokenBalance) < parseInt(voteWeight)) {
+    if (governanceTokenBalance.lt(voteWeight)) {
       alert("Insufficient governance tokens for the selected vote weight!");
       return;
     }
 
     // check governance token allowance
-    const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
+    const governanceTokenAllowance = await governance_token_contract.allowance(
+      account,
+      vault_address,
+      {}
+    );
 
-    if (parseInt(governanceTokenAllowance) < parseInt(voteWeight)) {
-      alert("Increase your governance token allowance before converting. Current allowance is: " + governanceTokenAllowance);
+    if (governanceTokenAllowance.lt(voteWeight)) {
+      alert(
+        "Increase your governance token allowance before converting. Current allowance is: " +
+        governanceTokenAllowance
+      );
       return;
     }
 
     // vote
-    await vault_contract.vote(parseInt(voteValue), parseInt(voteWeight), {});
+    await vault_contract.vote(parseInt(voteValue), voteWeight, {});
 
   } else {
     await connect();
@@ -510,9 +607,21 @@ async function allowBaseTokenForVoting() {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
 
-    const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
-    const i_token_contract = new ethers.Contract(await vault_contract.getITokenAddress({}), mintable_erc_20_abi, signer);
+    const vault_contract = new ethers.Contract(
+      vault_address,
+      vault_abi,
+      signer
+    );
+    const base_token_contract = new ethers.Contract(
+      await vault_contract.getBaseTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
+    const i_token_contract = new ethers.Contract(
+      await vault_contract.getITokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     // check if no dispute is open
     var disputeOpen = await vault_contract.getDisputeStatus();
@@ -524,13 +633,12 @@ async function allowBaseTokenForVoting() {
 
     var totalITokenSupply = await i_token_contract.totalSupply({});
     var initiationAmountDenominator = await vault_contract.getInitiationAmountDenominator();
-
-    var requiredDisputeInitiationAmount = Math.floor(parseInt(totalITokenSupply) / parseInt(initiationAmountDenominator));
+    var requiredDisputeInitiationAmount = totalITokenSupply.div(initiationAmountDenominator);
 
     // check base token balance
     const baseTokenBalance = await base_token_contract.balanceOf(account, {});
 
-    if (parseInt(baseTokenBalance) < parseInt(requiredDisputeInitiationAmount)) {
+    if (baseTokenBalance.lt(requiredDisputeInitiationAmount)) {
       alert("Insufficient base tokens!");
       return;
     }
@@ -538,11 +646,14 @@ async function allowBaseTokenForVoting() {
     // check base token allowance
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
-    if (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount)) {
+    if (baseTokenAllowance.lt(requiredDisputeInitiationAmount)) {
       await base_token_contract.approve(vault_address, requiredDisputeInitiationAmount, {});
     }
     else {
-      alert("Your spending allowance is already high enough. Current allowance is: " + baseTokenAllowance);
+      alert(
+        "Your spending allowance is already high enough. Current allowance is: " +
+        baseTokenAllowance
+      );
     }
 
   } else {
@@ -555,10 +666,10 @@ async function allowGovernanceTokenForVoting() {
 
   if (connected) {
 
-    const voteWeight = document.getElementById("voteWeight").value;
+    const voteWeight = parseBigNumber(document.getElementById("voteWeight").value, governance_token_decimals);
 
     // check if vote weight is greater than 0
-    if (voteWeight <= 0) {
+    if (voteWeight.lte(0)) {
       alert("Vote weight must be greater than 0");
       return;
     }
@@ -567,7 +678,11 @@ async function allowGovernanceTokenForVoting() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
+    const governance_token_contract = new ethers.Contract(
+      await vault_contract.getGovernanceTokenAddress({}),
+      erc_20_abi,
+      signer
+    );
 
     // check if voting is open
     var disputeOpen = await vault_contract.getDisputeStatus();
@@ -586,7 +701,7 @@ async function allowGovernanceTokenForVoting() {
     // check governance token balance
     const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
 
-    if (parseInt(governanceTokenBalance) < parseInt(voteWeight)) {
+    if (governanceTokenBalance.lt(voteWeight)) {
       alert("Insufficient governance tokens for the selected vote weight!");
       return;
     }
@@ -594,11 +709,14 @@ async function allowGovernanceTokenForVoting() {
     // check governance token allowance
     const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
 
-    if (parseInt(governanceTokenAllowance) < parseInt(voteWeight)) {
+    if (governanceTokenAllowance.lt(voteWeight)) {
       await governance_token_contract.approve(vault_address, voteWeight, {});
     }
     else {
-      alert("Your governance token allowance is already high enough. Current allowance is: " + governanceTokenAllowance);
+      alert(
+        "Your governance token allowance is already high enough. Current allowance is: " +
+        governanceTokenAllowance
+      );
     }
 
   } else {
@@ -620,7 +738,7 @@ async function withdrawBaseTokenReward() {
     const owedBaseTokens = await vault_contract.getOwedBaseTokenRewards({});
 
     // check if there are some fees to withdraw
-    if (owedBaseTokens <= 0) {
+    if (owedBaseTokens.lte(0)) {
       alert("Owed fees must be greater than 0");
       return;
     }
@@ -645,7 +763,7 @@ async function withdrawGovernanceTokenReward() {
     const owedGovernanceTokens = await vault_contract.getOwedGovernanceTokenRewards({});
 
     // check if there are some fees to withdraw
-    if (owedGovernanceTokens <= 0) {
+    if (owedGovernanceTokens.lte(0)) {
       alert("Owed fees must be greater than 0");
       return;
     }
@@ -665,7 +783,7 @@ async function convertInputChange() {
 
   if (connected) {
 
-    const convertInput = document.getElementById("convertInput").value;
+    const convertInput = parseBigNumber(document.getElementById("convertInput").value, base_token_decimals);
 
     // check if current allowance not big enough
 
@@ -673,14 +791,16 @@ async function convertInputChange() {
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const base_token_contract = new ethers.Contract(await vault_contract.getBaseTokenAddress({}), mintable_erc_20_abi, signer);
+    const base_token_contract = new ethers.Contract(
+      await vault_contract.getBaseTokenAddress({}),
+      mintable_erc_20_abi,
+      signer
+    );
 
     // check base token allowance
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
-    console.log(baseTokenAllowance);
-
-    if (parseInt(baseTokenAllowance) < parseInt(convertInput)) {
+    if (baseTokenAllowance.lt(convertInput)) {
       allowBaseTokenButton.hidden = false;
     } else {
       allowBaseTokenButton.hidden = true;
@@ -694,23 +814,30 @@ async function voteWeightInputChange() {
 
   if (connected) {
 
-    const voteWeight = document.getElementById("voteWeight").value;
+    const voteWeight = parseBigNumber(document.getElementById("voteWeight").value, governance_token_decimals);
 
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
-    const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
+    const governance_token_contract = new ethers.Contract(
+      await vault_contract.getGovernanceTokenAddress({}), 
+      erc_20_abi, 
+      signer
+    );
 
     // check if voting is open
     var disputeOpen = await vault_contract.getDisputeStatus();
     var disputeEndTime = await vault_contract.getDisputeEndTime();
 
     // check governance token allowance
-    const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
     const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
 
-    if (disputeOpen && (parseInt(disputeEndTime) > (Date.now() / 1000)) && (parseInt(governanceTokenAllowance) < parseInt(voteWeight))) {
+    if (
+      disputeOpen && 
+      (parseInt(disputeEndTime) > (Date.now() / 1000)) && 
+      (governanceTokenAllowance.lt(voteWeight))
+    ) {
       allowGovernanceTokenForVotingButton.hidden = false;
     } else {
       allowGovernanceTokenForVotingButton.hidden = true;
