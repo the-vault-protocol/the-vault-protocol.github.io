@@ -30,26 +30,36 @@ const baseTokenReward = document.getElementById("baseTokenReward");
 const governanceTokenReward = document.getElementById("governanceTokenReward");
 
 // event handlers
-try { connectButton.onclick = connect; } catch (error) { console.log(error); }
-try { allowBaseTokenButton.onclick = allowBaseToken; } catch (error) { console.log(error); }
-try { convertButton.onclick = convert; } catch (error) { console.log(error); }
-try { redeemButton.onclick = redeem; } catch (error) { console.log(error); }
-try { withdrawFeesButton.onclick = withdrawFees; } catch (error) { console.log(error); }
-try { unlockRequestButton.onclick = requestUnlock; } catch (error) { console.log(error); }
-try { resolveDisputeButton.onclick = resolveDispute; } catch (error) { console.log(error); }
-try { voteButton.onclick = vote; } catch (error) { console.log(error); }
-try { allowBaseTokenForVotingButton.onclick = allowBaseTokenForVoting; } catch (error) { console.log(error); }
-try { allowGovernanceTokenForVotingButton.onclick = allowGovernanceTokenForVoting; } catch (error) { console.log(error); }
-try { withdrawBaseTokenRewardButton.onclick = withdrawBaseTokenReward; } catch (error) { console.log(error); }
-try { withdrawGovernanceTokenRewardButton.onclick = withdrawGovernanceTokenReward; } catch (error) { console.log(error); }
+try { connectButton.onclick = connect; } catch (error) { }
+try { allowBaseTokenButton.onclick = allowBaseToken; } catch (error) { }
+try { convertButton.onclick = convert; } catch (error) { }
+try { redeemButton.onclick = redeem; } catch (error) { }
+try { withdrawFeesButton.onclick = withdrawFees; } catch (error) { }
+try { unlockRequestButton.onclick = requestUnlock; } catch (error) { }
+try { resolveDisputeButton.onclick = resolveDispute; } catch (error) { }
+try { voteButton.onclick = vote; } catch (error) { }
+try { allowBaseTokenForVotingButton.onclick = allowBaseTokenForVoting; } catch (error) { }
+try { allowGovernanceTokenForVotingButton.onclick = allowGovernanceTokenForVoting; } catch (error) { }
+try { withdrawBaseTokenRewardButton.onclick = withdrawBaseTokenReward; } catch (error) { }
+try { withdrawGovernanceTokenRewardButton.onclick = withdrawGovernanceTokenReward; } catch (error) { }
 
 // oninput events
-try { document.getElementById("convertInput").oninput = convertInputChange; } catch (error) { console.log(error); }
-try { document.getElementById("voteWeight").oninput = voteWeightInputChange; } catch (error) { console.log(error); }
+try { document.getElementById("convertInput").oninput = convertInputChange; } catch (error) { }
+try { document.getElementById("voteWeight").oninput = voteWeightInputChange; } catch (error) { }
 
 // global variables
 var connected = false;
 var account = "";
+
+// token decimals
+const base_token_decimals = 18;
+const governance_token_decimals = 18;
+const i_token_decimals = 18;
+const c_token_decimals = 18;
+
+function round(number, decimals) {
+  return Math.round(number / decimals * 100) / 100
+}
 
 // connecting
 
@@ -122,14 +132,14 @@ async function updateFields() {
         var vaultLocked = "Open";
       }
 
-      try { vaultToken.innerHTML = await base_token_contract.name({}); } catch (error) { console.log(error); }
-      try { oracleCondition.innerHTML = await vault_contract.getOracleCondition(); } catch (error) { console.log(error); }
-      try { baseTokenAmount.innerHTML = await base_token_contract.balanceOf(account, {}); } catch (error) { console.log(error); }
-      try { cTokenAmount.innerHTML = await c_token_contract.balanceOf(account, {}); } catch (error) { console.log(error); }
-      try { iTokenAmount.innerHTML = await i_token_contract.balanceOf(account, {}); } catch (error) { console.log(error); }
-      try { vaultStatus.innerHTML = vaultLocked; } catch (error) { console.log(error); }
-      try { governanceTokenAmount.innerHTML = await governance_token_contract.balanceOf(account, {}); } catch (error) { console.log(error); }
-      try { accruedFeesAmount.innerHTML = await vault_contract.getOwedFees({}); } catch (error) { console.log(error); }
+      try { vaultToken.innerHTML = await base_token_contract.name({}); } catch (error) { }
+      try { oracleCondition.innerHTML = await vault_contract.getOracleCondition(); } catch (error) { }
+      try { baseTokenAmount.innerHTML = await base_token_contract.balanceOf(account, {}); } catch (error) { }
+      try { cTokenAmount.innerHTML = await c_token_contract.balanceOf(account, {}); } catch (error) { }
+      try { iTokenAmount.innerHTML = await i_token_contract.balanceOf(account, {}); } catch (error) { }
+      try { vaultStatus.innerHTML = vaultLocked; } catch (error) { }
+      try { governanceTokenAmount.innerHTML = await governance_token_contract.balanceOf(account, {}); } catch (error) { }
+      try { accruedFeesAmount.innerHTML = await vault_contract.getOwedFees({}); } catch (error) { }
 
       // dispute status
       var disputeOpen = await vault_contract.getDisputeStatus();
@@ -144,7 +154,7 @@ async function updateFields() {
         var votingPhaseLabel = "Unlock Request Voting Finished (Resolve Dispute To Finalize)";
       }
 
-      try { votingPhase.innerHTML = votingPhaseLabel; } catch (error) { console.log(error); }
+      try { votingPhase.innerHTML = votingPhaseLabel; } catch (error) { }
 
       // dispute initiation amount
       var totalITokenSupply = await i_token_contract.totalSupply({});
@@ -152,22 +162,24 @@ async function updateFields() {
 
       var requiredDisputeInitiationAmount = Math.floor(parseInt(totalITokenSupply) / parseInt(initiationAmountDenominator));
 
-      try { unlockAmount.innerHTML = requiredDisputeInitiationAmount; } catch (error) { console.log(error); }
+      try { unlockAmount.innerHTML = requiredDisputeInitiationAmount; } catch (error) { }
 
       // voting reward
-      try { baseTokenReward.innerHTML = await vault_contract.getOwedBaseTokenRewards(); } catch (error) { console.log(error); }
-      try { governanceTokenReward.innerHTML = await vault_contract.getOwedGovernanceTokenRewards(); } catch (error) { console.log(error); }
+      try { baseTokenReward.innerHTML = await vault_contract.getOwedBaseTokenRewards(); } catch (error) { }
+      try { governanceTokenReward.innerHTML = await vault_contract.getOwedGovernanceTokenRewards(); } catch (error) { }
 
       // state based base token allowance for voting visibility
       const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
       if (!disputeOpen && (parseInt(baseTokenAllowance) < parseInt(requiredDisputeInitiationAmount))) {
-          allowBaseTokenForVotingButton.hidden = false;
+        try { allowBaseTokenForVotingButton.hidden = false; } catch (error) { }
       }
       else {
-          allowBaseTokenForVotingButton.hidden = true;
+        try { allowBaseTokenForVotingButton.hidden = true; } catch (error) { }
       }
-      
+
+      // set base token decimals
+      try { base_token_decimals = await base_token_contract.decimals(); } catch (error) { }
 
     } catch (error) {
       console.log(error);
@@ -509,7 +521,7 @@ async function allowBaseTokenForVoting() {
       alert("An unlock request has already been opened");
       return;
     }
-    
+
     var totalITokenSupply = await i_token_contract.totalSupply({});
     var initiationAmountDenominator = await vault_contract.getInitiationAmountDenominator();
 
@@ -570,7 +582,7 @@ async function allowGovernanceTokenForVoting() {
       alert("The voting phase is already over");
       return;
     }
-    
+
     // check governance token balance
     const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
 
@@ -592,7 +604,7 @@ async function allowGovernanceTokenForVoting() {
   } else {
     await connect();
   }
-  
+
 }
 
 // voting reward
@@ -679,14 +691,14 @@ async function convertInputChange() {
 }
 
 async function voteWeightInputChange() {
-  
+
   if (connected) {
 
     const voteWeight = document.getElementById("voteWeight").value;
 
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
-    
+
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
     const governance_token_contract = new ethers.Contract(await vault_contract.getGovernanceTokenAddress({}), erc_20_abi, signer);
 
@@ -697,13 +709,13 @@ async function voteWeightInputChange() {
     // check governance token allowance
     const governanceTokenBalance = await governance_token_contract.balanceOf(account, {});
     const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
-    
+
     if (disputeOpen && (parseInt(disputeEndTime) > (Date.now() / 1000)) && (parseInt(governanceTokenAllowance) < parseInt(voteWeight))) {
       allowGovernanceTokenForVotingButton.hidden = false;
     } else {
       allowGovernanceTokenForVotingButton.hidden = true;
-    } 
+    }
 
   }
-  
+
 }
