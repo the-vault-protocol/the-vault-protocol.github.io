@@ -31,6 +31,7 @@ body {
 .topnav a.active {
   background-color: grey;
   color: white;
+  font-weight: bold;
 }
 
 .container {
@@ -40,4 +41,37 @@ body {
   border: 3px solid green;
   padding: 10px;
   text-align: center;
+}
+
+button,
+select {
+  border-radius: 1px;
+  border-color: grey;
+  background-color: white;
+  border: none;
+  color: black;
+  text-align: center;
+  font-size: 15px;
+  padding: 10px;
+  transition: all 0.5s;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 5px;
+}
+
+button:hover {
+  background-color: grey;
+}
+
+button:active {
+  background-color: grey;
+  box-shadow: 0 5px #666;
+  transform: translateY(4px);
+}
+
+input {
+  background-color: white;
+  padding: 10px;
+  border: 1px solid grey;
+  font-weight: bold;
 }
