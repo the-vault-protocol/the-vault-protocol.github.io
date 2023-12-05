@@ -1,4 +1,4 @@
-export const vault_address = "0x9018E031Fe0D028769C400927f19Da4d02C5b96b";
+export const vault_address = "0xbB194767FEaF4D34A243E8A250dA22D888B0EB19";
 
 export const mintable_erc_20_abi = [
   {
