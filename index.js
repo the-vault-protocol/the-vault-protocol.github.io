@@ -28,6 +28,7 @@ const votingPhase = document.getElementById("votingPhase");
 const unlockAmount = document.getElementById("unlockAmount");
 const baseTokenReward = document.getElementById("baseTokenReward");
 const governanceTokenReward = document.getElementById("governanceTokenReward");
+const lockedTokens = document.getElementById("lockedTokens");
 
 // event handlers
 try { connectButton.onclick = connect; } catch (error) { }
@@ -236,6 +237,13 @@ async function updateFields() {
       else {
         try { allowBaseTokenForVotingButton.hidden = true; } catch (error) { }
       }
+
+      // get locked base tokens
+      try {
+        lockedTokens.innerHTML = format_number(
+          await base_token_contract.balanceOf(vault_address, {}), base_token_decimals
+        );
+      } catch (error) { }
 
     } catch (error) {
       console.log(error);

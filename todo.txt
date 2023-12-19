@@ -1,6 +1,4 @@
-- simple protocol description
 - logo
 - tokenomics / token distribution in whitepaper -> set up treasury
 - link to uniswap
 - link social media accounts
-- stats about locked assets, etc.
