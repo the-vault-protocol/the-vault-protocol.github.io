@@ -281,7 +281,18 @@ async function allowBaseToken() {
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
     if (baseTokenAllowance.lt(convertInput)) {
-      await base_token_contract.approve(vault_address, convertInput, {});
+
+      const tx = await base_token_contract.approve(vault_address, convertInput, {});
+
+      // wait for confirmation
+      const pollInterval = setInterval(async () => {
+        const receipt = await provider.getTransactionReceipt(tx.hash);
+        if (receipt && receipt.confirmations > 0) {
+          clearInterval(pollInterval);
+          window.location.reload();
+        }
+      }, 3000);
+
     }
     else {
       alert(
@@ -338,7 +349,16 @@ async function convert() {
     }
 
     // convert
-    await vault_contract.convert(convertInput, {});
+    const tx = await vault_contract.convert(convertInput, {});
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -386,7 +406,16 @@ async function redeem() {
       }
 
       // redeem
-      await vault_contract.redeem(redeemInput, {});
+      const tx = await vault_contract.redeem(redeemInput, {});
+
+      // wait for confirmation
+      const pollInterval = setInterval(async () => {
+        const receipt = await provider.getTransactionReceipt(tx.hash);
+        if (receipt && receipt.confirmations > 0) {
+          clearInterval(pollInterval);
+          window.location.reload();
+        }
+      }, 3000);
 
     } else {
 
@@ -399,7 +428,16 @@ async function redeem() {
       }
 
       // redeem
-      await vault_contract.redeem(redeemInput, {});
+      const tx = await vault_contract.redeem(redeemInput, {});
+
+      // wait for confirmation
+      const pollInterval = setInterval(async () => {
+        const receipt = await provider.getTransactionReceipt(tx.hash);
+        if (receipt && receipt.confirmations > 0) {
+          clearInterval(pollInterval);
+          window.location.reload();
+        }
+      }, 3000);
 
     }
 
@@ -428,7 +466,16 @@ async function withdrawFees() {
     }
 
     // withdraw fees
-    await vault_contract.withdrawOwedFees({});
+    const tx = await vault_contract.withdrawOwedFees({});
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -489,7 +536,16 @@ async function requestUnlock() {
     }
 
     // request unlock
-    await vault_contract.initiateDispute();
+    const tx = await vault_contract.initiateDispute();
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -522,7 +578,16 @@ async function resolveDispute() {
     }
 
     // resolve dispute
-    await vault_contract.resolveDispute();
+    const tx = await vault_contract.resolveDispute();
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -592,7 +657,16 @@ async function vote() {
     }
 
     // vote
-    await vault_contract.vote(parseInt(voteValue), voteWeight, {});
+    const tx = await vault_contract.vote(parseInt(voteValue), voteWeight, {});
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -647,7 +721,18 @@ async function allowBaseTokenForVoting() {
     const baseTokenAllowance = await base_token_contract.allowance(account, vault_address, {});
 
     if (baseTokenAllowance.lt(requiredDisputeInitiationAmount)) {
-      await base_token_contract.approve(vault_address, requiredDisputeInitiationAmount, {});
+
+      const tx = await base_token_contract.approve(vault_address, requiredDisputeInitiationAmount, {});
+
+      // wait for confirmation
+      const pollInterval = setInterval(async () => {
+        const receipt = await provider.getTransactionReceipt(tx.hash);
+        if (receipt && receipt.confirmations > 0) {
+          clearInterval(pollInterval);
+          window.location.reload();
+        }
+      }, 3000);
+
     }
     else {
       alert(
@@ -710,7 +795,18 @@ async function allowGovernanceTokenForVoting() {
     const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
 
     if (governanceTokenAllowance.lt(voteWeight)) {
-      await governance_token_contract.approve(vault_address, voteWeight, {});
+
+      const tx = await governance_token_contract.approve(vault_address, voteWeight, {});
+
+      // wait for confirmation
+      const pollInterval = setInterval(async () => {
+        const receipt = await provider.getTransactionReceipt(tx.hash);
+        if (receipt && receipt.confirmations > 0) {
+          clearInterval(pollInterval);
+          window.location.reload();
+        }
+      }, 3000);
+
     }
     else {
       alert(
@@ -744,7 +840,16 @@ async function withdrawBaseTokenReward() {
     }
 
     // withdraw fees
-    await vault_contract.withdrawBaseTokenReward({});
+    const tx = await vault_contract.withdrawBaseTokenReward({});
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -769,7 +874,16 @@ async function withdrawGovernanceTokenReward() {
     }
 
     // withdraw fees
-    await vault_contract.withdrawGovernanceTokenReward({});
+    const tx = await vault_contract.withdrawGovernanceTokenReward({});
+
+    // wait for confirmation
+    const pollInterval = setInterval(async () => {
+      const receipt = await provider.getTransactionReceipt(tx.hash);
+      if (receipt && receipt.confirmations > 0) {
+        clearInterval(pollInterval);
+        window.location.reload();
+      }
+    }, 3000);
 
   } else {
     await connect();
@@ -786,7 +900,6 @@ async function convertInputChange() {
     const convertInput = parseBigNumber(document.getElementById("convertInput").value, base_token_decimals);
 
     // check if current allowance not big enough
-
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
 
@@ -821,8 +934,8 @@ async function voteWeightInputChange() {
 
     const vault_contract = new ethers.Contract(vault_address, vault_abi, signer);
     const governance_token_contract = new ethers.Contract(
-      await vault_contract.getGovernanceTokenAddress({}), 
-      erc_20_abi, 
+      await vault_contract.getGovernanceTokenAddress({}),
+      erc_20_abi,
       signer
     );
 
@@ -834,8 +947,8 @@ async function voteWeightInputChange() {
     const governanceTokenAllowance = await governance_token_contract.allowance(account, vault_address, {});
 
     if (
-      disputeOpen && 
-      (parseInt(disputeEndTime) > (Date.now() / 1000)) && 
+      disputeOpen &&
+      (parseInt(disputeEndTime) > (Date.now() / 1000)) &&
       (governanceTokenAllowance.lt(voteWeight))
     ) {
       allowGovernanceTokenForVotingButton.hidden = false;
